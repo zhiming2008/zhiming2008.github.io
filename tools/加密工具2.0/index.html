@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内容加密工具 | 安全便捷的文本加密</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-top: 20px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 12px;
+            color: #2c3e50;
+            background: linear-gradient(90deg, #3498db, #2c80b9);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .card-header {
+            background: linear-gradient(90deg, #3498db, #2c80b9);
+            color: white;
+            padding: 22px 30px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .card-body {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.05rem;
+        }
+        
+        .input-with-icon {
+            position: relative;
+        }
+        
+        .input-with-icon i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        textarea, input {
+            width: 100%;
+            padding: 14px 20px;
+            padding-left: 45px;
+            border: 2px solid #e0e6ed;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        textarea[readonly] {
+            background-color: #f8fafc;
+            cursor: not-allowed;
+        }
+        
+        input::placeholder, textarea::placeholder {
+            color: #bdc3c7;
+            font-style: italic;
+        }
+        
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+        }
+        
+        .action-row {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        button {
+            flex: 1;
+            background: linear-gradient(90deg, #3498db, #2c80b9);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+            background: linear-gradient(90deg, #2980b9, #2573a8);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #3498db;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 25px;
+            font-size: 0.95rem;
+        }
+        
+        .info-box h3 {
+            color: #2c6ca0;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-box ul {
+            padding-left: 20px;
+        }
+        
+        .info-box li {
+            margin-bottom: 6px;
+            list-style-type: circle;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+            border-top: 4px solid #3498db;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-card i {
+            font-size: 2.5rem;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .feature-card h3 {
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-size: 1.3rem;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #7f8c8d;
+            padding: 20px;
+            font-size: 0.95rem;
+        }
+        
+        @media (max-width: 768px) {
+            .action-row {
+                flex-direction: column;
+            }
+            
+            textarea, input {
+                min-height: 100px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-lock"></i> 内容加密工具</h1>
+            <p class="subtitle">安全、便捷的文本加密解决方案 - 使用行业标准AES加密算法</p>
+        </header>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-shield-alt"></i> 加密您的敏感内容
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="content"><i class="fas fa-file-alt"></i> 输入要加密的内容</label>
+                    <textarea id="content" placeholder="在此输入您需要加密的文本内容..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password"><i class="fas fa-key"></i> 设置加密密码</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder="请输入安全的加密密码">
+                    </div>
+                </div>
+                
+                <div class="action-row">
+                    <button onclick="encrypt()">
+                        <i class="fas fa-lock"></i> 立即加密
+                    </button>
+                    <button onclick="copyResult()" style="background: linear-gradient(90deg, #2ecc71, #27ae60);">
+                        <i class="fas fa-copy"></i> 复制结果
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="result"><i class="fas fa-file-encrypt"></i> 加密结果</label>
+                    <textarea id="result" placeholder="加密后的内容将显示在这里..." readonly></textarea>
+                </div>
+                
+                <div class="info-box">
+                    <h3><i class="fas fa-info-circle"></i> 使用说明</h3>
+                    <ul>
+                        <li>加密过程在您的浏览器中完成，内容不会发送到服务器</li>
+                        <li>请务必记住您的密码，丢失后无法解密</li>
+                        <li>加密结果可安全存储或分享，只有知道密码的人才能解密</li>
+                        <li>点击"复制结果"按钮可快速复制加密内容</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="features">
+            <div class="feature-card">
+                <i class="fas fa-shield-alt"></i>
+                <h3>银行级安全</h3>
+                <p>使用行业标准的AES-256加密算法，确保您的数据安全可靠，达到银行级安全标准。</p>
+            </div>
+            
+            <div class="feature-card">
+                <i class="fas fa-bolt"></i>
+                <h3>即时加密</h3>
+                <p>所有加密操作在客户端完成，无需等待服务器响应，瞬间完成加密过程。</p>
+            </div>
+            
+            <div class="feature-card">
+                <i class="fas fa-lock-open"></i>
+                <h3>安全无忧</h3>
+                <p>您的数据始终在本地处理，不会上传到任何服务器，完全保护您的隐私安全。</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>内容加密工具 &copy; 2026 | 基于CryptoJS实现 | 所有操作均在您的浏览器中完成</p>
+            <p style="margin-top: 8px; color: #95a5a6; font-size: 0.85rem;">构建日期: Wednesday, February 25, 2026</p>
+        </footer>
+    </div>
+    
+    <script>
+        function encrypt() {
+            const content = document.getElementById('content').value;
+            const password = document.getElementById('password').value;
+            
+            if (!content.trim()) {
+                alert('请输入要加密的内容');
+                document.getElementById('content').focus();
+                return;
+            }
+            
+            if (!password) {
+                alert('请输入加密密码');
+                document.getElementById('password').focus();
+                return;
+            }
+            
+            try {
+                const encrypted = CryptoJS.AES.encrypt(content, password).toString();
+                document.getElementById('result').value = encrypted;
+                
+                // 添加成功提示
+                const resultTextarea = document.getElementById('result');
+                resultTextarea.style.borderColor = '#2ecc71';
+                setTimeout(() => {
+                    resultTextarea.style.borderColor = '#e0e6ed';
+                }, 1500);
+                
+                // 自动滚动到结果区域
+                resultTextarea.scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                alert('加密过程中出现错误: ' + error.message);
+            }
+        }
+        
+        function copyResult() {
+            const result = document.getElementById('result');
+            if (!result.value) {
+                alert('没有可复制的加密内容');
+                return;
+            }
+            
+            result.select();
+            document.execCommand('copy');
+            
+            // 视觉反馈
+            const originalText = result.value;
+            result.value = '✅ 加密内容已复制到剪贴板!';
+            result.style.color = '#27ae60';
+            
+            setTimeout(() => {
+                result.value = originalText;
+                result.style.color = '';
+            }, 2000);
+        }
+        
+        // 添加回车键支持
+        document.getElementById('content').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                encrypt();
+            }
+        });
+        
+        document.getElementById('password').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                encrypt();
+            }
+        });
+    </script>
+</body>
+</html>
