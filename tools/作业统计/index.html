@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作业提交统计工具</title>
+    <!-- 引入 SheetJS 用于解析 Excel/CSV -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f5f7fa;
+            --border-color: #dcdfe6;
+            --yellow-bg: #fff8e1;
+            --yellow-border: #ffc107;
+            --green-bg: #e8f5e9;
+            --green-border: #4caf50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #2c3e50;
+        }
+
+        /* 顶部控制区 */
+        .top-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        input[type="file"] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #357abd;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline:hover {
+            background-color: #f0f7ff;
+        }
+
+        #searchInput {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        #searchInput:focus {
+            border-color: var(--primary-color);
+        }
+
+        /* 列表区域 */
+        .lists-wrapper {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .list-box {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            min-height: 300px;
+            background: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .list-header {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: bold;
+            color: #555;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .list-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .list-content li {
+            padding: 8px 15px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .list-content li:last-child {
+            border-bottom: none;
+        }
+
+        /* 状态高亮 */
+        .list-box.highlight-yellow {
+            border-color: var(--yellow-border);
+            background-color: var(--yellow-bg);
+        }
+        
+        .list-box.highlight-yellow .list-header {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .list-box.highlight-green {
+            border-color: var(--green-border);
+            background-color: var(--green-bg);
+        }
+
+        .list-box.highlight-green .list-header {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        /* 结果区域 */
+        .result-area {
+            border-top: 2px dashed var(--border-color);
+            padding-top: 20px;
+        }
+
+        .result-display {
+            margin-top: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            min-height: 40px;
+            word-break: break-all;
+            color: #d63031;
+            font-weight: 500;
+            display: none;
+        }
+
+        .result-display.show {
+            display: block;
+        }
+
+        .status-badge {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: #eee;
+            margin-left: 8px;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .lists-wrapper {
+                flex-direction: column;
+            }
+            .top-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            #searchInput {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📚 作业提交统计工具（Qwen3.5-Max-Preview编写）</h1>
+
+    <div class="top-bar">
+        <div class="file-input-wrapper">
+            <button class="btn btn-outline">📂 导入学生信息 (xlsx/csv)</button>
+            <input type="file" id="importFile" accept=".xlsx, .xls, .csv">
+        </div>
+        
+        <input type="text" id="searchInput" placeholder="输入学号或缩写 (支持模糊匹配，回车确认)">
+        <button class="btn" id="confirmBtn">确定</button>
+    </div>
+
+    <div class="lists-wrapper">
+        <div class="list-box" id="pendingBox">
+            <div class="list-header">待选学生 <span class="status-badge" id="pendingCount">0</span></div>
+            <ul class="list-content" id="pendingList">
+                <li style="color:#999; text-align:center; padding:20px;">请先导入文件</li>
+            </ul>
+        </div>
+
+        <div class="list-box">
+            <div class="list-header">已完成学生 <span class="status-badge" id="completedCount">0</span></div>
+            <ul class="list-content" id="completedList">
+                <!-- 已完成列表 -->
+            </ul>
+        </div>
+    </div>
+
+    <div class="result-area">
+        <button class="btn" id="checkBtn">📋 检查结果</button>
+        <div class="result-display" id="resultDisplay"></div>
+    </div>
+</div>
+
+<script>
+    // 状态管理
+    let allStudents = []; // 所有学生数据 {id, name, abbr, rawId}
+    let completedIds = new Set(); // 已完成的学号集合
+    let currentMatches = []; // 当前输入匹配的学生
+
+    // DOM 元素
+    const importFile = document.getElementById('importFile');
+    const searchInput = document.getElementById('searchInput');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const pendingList = document.getElementById('pendingList');
+    const completedList = document.getElementById('completedList');
+    const pendingBox = document.getElementById('pendingBox');
+    const checkBtn = document.getElementById('checkBtn');
+    const resultDisplay = document.getElementById('resultDisplay');
+    const pendingCount = document.getElementById('pendingCount');
+    const completedCount = document.getElementById('completedCount');
+
+    // 1. 导入文件处理
+    importFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                // 读取为 JSON，header:1 表示按数组读取，便于处理
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+
+                if (jsonData.length < 2) {
+                    alert('文件内容为空或格式不正确');
+                    return;
+                }
+
+                // 解析数据，假设第一行是表头，数据从第二行开始
+                // 列顺序：学号, 姓名, 缩写
+                allStudents = [];
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (!row[0]) continue; // 跳过空行
+
+                    // 学号统一转为字符串并去除空格，保留原始显示
+                    const rawId = String(row[0]).trim();
+                    
+                    allStudents.push({
+                        id: rawId,
+                        name: String(row[1] || '').trim(),
+                        abbr: String(row[2] || '').trim().toLowerCase(),
+                        // 用于数值比较的学号（如果是纯数字）
+                        numId: isNaN(rawId) ? null : Number(rawId)
+                    });
+                }
+
+                if (allStudents.length === 0) {
+                    alert('未解析到有效学生数据');
+                    return;
+                }
+
+                // 重置状态
+                completedIds.clear();
+                searchInput.value = '';
+                currentMatches = [];
+                renderPendingList(allStudents);
+                renderCompletedList();
+                updateHighlights();
+                
+                // 清空文件输入，允许重复导入同一文件
+                importFile.value = '';
+                
+            } catch (err) {
+                console.error(err);
+                alert('文件解析失败，请检查文件格式');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // 2. 输入与筛选逻辑
+    searchInput.addEventListener('input', () => {
+        const val = searchInput.value.trim().toLowerCase();
+        
+        // 如果输入为空，显示所有待选学生
+        if (!val) {
+            currentMatches = [];
+            renderPendingList(allStudents);
+            updateHighlights();
+            return;
+        }
+
+        currentMatches = allStudents.filter(student => {
+            // 匹配策略：
+            // 1. 学号包含输入
+            // 2. 学号数值相等 (处理 04 vs 4)
+            // 3. 缩写包含输入
+            
+            const idMatch = student.id.includes(val);
+            const abbrMatch = student.abbr.includes(val);
+            
+            let numMatch = false;
+            // 尝试数值匹配
+            const inputNum = Number(val);
+            if (!isNaN(inputNum) && student.numId !== null) {
+                numMatch = (inputNum === student.numId);
+            }
+
+            return idMatch || abbrMatch || numMatch;
+        });
+
+        renderPendingList(currentMatches);
+        updateHighlights();
+    });
+
+    // 监听回车
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            handleConfirm();
+        }
+    });
+
+    // 3. 确认逻辑
+    confirmBtn.addEventListener('click', handleConfirm);
+
+    function handleConfirm() {
+        // 唯一匹配才能确认
+        if (currentMatches.length === 1) {
+            const student = currentMatches[0];
+            
+            // 检查是否已完成
+            if (completedIds.has(student.id)) {
+                alert(`⚠️ 学号 ${student.id} (${student.name}) 已被统计！`);
+                // 保留输入框，允许检查
+                searchInput.focus();
+                return;
+            }
+
+            // 添加完成
+            completedIds.add(student.id);
+            
+            // 更新 UI
+            renderCompletedList();
+            
+            // 清除输入并重置列表
+            searchInput.value = '';
+            currentMatches = [];
+            renderPendingList(allStudents);
+            updateHighlights();
+            searchInput.focus();
+            
+        } else if (currentMatches.length === 0) {
+            // 无匹配不操作，或者提示
+            // 为了流畅体验，无匹配时回车不做任何事或轻微提示
+            if (searchInput.value.trim()) {
+                // 可以在这里添加 toast 提示，暂时用 alert 可能会打断流程
+                // alert('无匹配学生'); 
+            }
+        } else {
+            alert(`⚠️ 匹配到 ${currentMatches.length} 个学生，请继续输入以精确匹配`);
+        }
+    }
+
+    // 4. 渲染函数
+    function renderPendingList(list) {
+        pendingList.innerHTML = '';
+        pendingCount.textContent = list.length;
+
+        if (list.length === 0) {
+            pendingList.innerHTML = '<li style="color:#999; text-align:center;">无匹配数据</li>';
+            return;
+        }
+
+        list.forEach(s => {
+            const li = document.createElement('li');
+            li.textContent = `${s.id} - ${s.name}`;
+            // 如果缩写存在，显示出来辅助确认
+            if (s.abbr) {
+                const span = document.createElement('span');
+                span.style.cssText = 'color:#888; font-size:12px; margin-left:5px;';
+                span.textContent = `(${s.abbr})`;
+                li.appendChild(span);
+            }
+            pendingList.appendChild(li);
+        });
+    }
+
+    function renderCompletedList() {
+        completedList.innerHTML = '';
+        completedCount.textContent = completedIds.size;
+
+        // 保持顺序或按学号排序，这里按添加顺序可能更好，但 Set 是无序的
+        // 为了显示友好，我们遍历 allStudents 找出已完成的，保持原始顺序
+        const completedStudents = allStudents.filter(s => completedIds.has(s.id));
+
+        completedStudents.forEach(s => {
+            const li = document.createElement('li');
+            li.textContent = s.id;
+            li.title = s.name; // 鼠标悬停显示姓名
+            completedList.appendChild(li);
+        });
+    }
+
+    function updateHighlights() {
+        pendingBox.classList.remove('highlight-yellow', 'highlight-green');
+        
+        // 只有当有输入且匹配结果不为空时才高亮
+        if (searchInput.value.trim() && currentMatches.length > 0) {
+            if (currentMatches.length > 1) {
+                pendingBox.classList.add('highlight-yellow');
+            } else if (currentMatches.length === 1) {
+                pendingBox.classList.add('highlight-green');
+            }
+        }
+    }
+
+    // 5. 检查结果
+    checkBtn.addEventListener('click', () => {
+        if (allStudents.length === 0) {
+            alert('请先导入学生信息');
+            return;
+        }
+
+        const incomplete = allStudents
+            .filter(s => !completedIds.has(s.id))
+            .map(s => s.id);
+
+        if (incomplete.length === 0) {
+            resultDisplay.textContent = '✅ 所有学生均已完成提交！';
+            resultDisplay.style.color = '#27ae60';
+        } else {
+            resultDisplay.textContent = incomplete.join('、');
+            resultDisplay.style.color = '#d63031';
+        }
+        resultDisplay.classList.add('show');
+        
+        // 滚动到底部
+        resultDisplay.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // 初始化提示
+    window.addEventListener('DOMContentLoaded', () => {
+        searchInput.focus();
+    });
+</script>
+
+</body>
+</html>
+<!--
+编写时使用的提示词：
+帮我使用html、css、javascript写一个工具网站，用于快速统计作业提交情况。顶部显示依次导入按钮、输入框和确定按钮、2个列表，左列表显示待选学生（学号和姓名），右列表显示**完成的**学生（学号），然后是检查结果按钮，最下方显示结果（**未完成**的学生，用学号表示，顿号分割）。用户操作流程如下：
+1.导入学生信息，使用xlsx或csv（看你方便用哪个），信息3列，分别是学号、姓名、姓名缩写（2-4个英文字母），立即进入待选学生
+2.用户在输入框中输入信息，支持模糊识别学号（例如04和4均可识别）和姓名缩写，在左列表实时显示待选学生，如果候选学生超过1个，用黄色标识列表，如果只有一个学生，用绿色，用户此时按下回车可以将学生加入已完成列表，清除输入框并允许下一次筛选，但是不将这位学生从待选学生中移除，之后的每次筛选都将全部显示。
+3.如果发现用户输入了已经被标记完成的学生信息，则提示已被统计，并保留输入框允许用户检查或修改
+
+-->
