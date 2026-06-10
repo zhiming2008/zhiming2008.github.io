@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内容加密工具 | 安全便捷的文本加密与解密</title>
+    <!-- 引入 Tailwind CSS 进行美观的样式设计 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 CryptoJS 实现 AES 加密/解密 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        .tab-active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .tab-inactive {
+            color: #6b7280;
+        }
+        .tab-inactive:hover {
+            color: #374151;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col font-sans text-gray-800">
+
+    <!-- 头部 -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-6 text-center">
+            <h1 class="text-3xl font-bold text-gray-900">内容加密工具</h1>
+            <p class="mt-2 text-gray-600">安全、便捷的文本加密与解密解决方案 - 使用行业标准 AES-256 加密算法</p>
+        </div>
+    </header>
+
+    <!-- 主体内容 -->
+    <main class="flex-grow max-w-4xl mx-auto px-4 py-8 w-full">
+        
+        <!-- 选项卡切换 -->
+        <div class="flex border-b border-gray-200 mb-6">
+            <button onclick="switchTab('encrypt')" id="tab-encrypt" class="flex-1 py-3 text-center tab-active transition-colors">
+                🔒 加密内容
+            </button>
+            <button onclick="switchTab('decrypt')" id="tab-decrypt" class="flex-1 py-3 text-center tab-inactive transition-colors">
+                🔓 解密内容
+            </button>
+        </div>
+
+        <!-- 加密模块 -->
+        <div id="encrypt-section" class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">加密您的敏感内容</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">输入要加密的内容</label>
+                    <textarea id="encryptInput" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="在此输入需要加密的敏感文本..."></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">设置加密密码</label>
+                    <input type="password" id="encryptPassword" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="请输入强密码以保护您的数据">
+                </div>
+
+                <button onclick="encryptData()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200">
+                    立即加密
+                </button>
+
+                <div id="encryptResultContainer" class="hidden mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">加密结果</label>
+                    <textarea id="encryptOutput" rows="3" readonly class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 font-mono text-sm"></textarea>
+                    <button onclick="copyToClipboard('encryptOutput')" class="mt-2 w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                        复制结果
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 解密模块 -->
+        <div id="decrypt-section" class="hidden bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">解密已加密的内容</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">输入加密后的密文</label>
+                    <textarea id="decryptInput" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition font-mono text-sm" placeholder="在此粘贴需要解密的密文..."></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">输入解密密码</label>
+                    <input type="password" id="decryptPassword" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition" placeholder="请输入当初设置的加密密码">
+                </div>
+
+                <button onclick="decryptData()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200">
+                    立即解密
+                </button>
+
+                <div id="decryptResultContainer" class="hidden mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">解密结果</label>
+                    <textarea id="decryptOutput" rows="3" readonly class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700"></textarea>
+                    <button onclick="copyToClipboard('decryptOutput')" class="mt-2 w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                        复制结果
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 使用说明 -->
+        <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-900 mb-3">使用说明</h3>
+            <ul class="list-disc list-inside space-y-2 text-blue-800 text-sm">
+                <li><strong>本地处理：</strong>加密与解密过程均在您的浏览器中完成，内容绝不会发送到任何服务器。</li>
+                <li><strong>密码保管：</strong>请务必记住您的密码，丢失后<strong>无法</strong>恢复或解密数据。</li>
+                <li><strong>安全分享：</strong>加密结果可安全存储或分享，只有知道密码的人才能成功解密。</li>
+                <li><strong>快捷操作：</strong>点击“复制结果”按钮可快速将内容复制到剪贴板。</li>
+            </ul>
+        </div>
+
+        <!-- 特性展示 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-100 text-center">
+                <div class="text-3xl mb-2">🛡️</div>
+                <h4 class="font-semibold text-gray-900">银行级安全</h4>
+                <p class="text-sm text-gray-600 mt-1">使用行业标准的 AES-256 加密算法，确保您的数据安全可靠。</p>
+            </div>
+            <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-100 text-center">
+                <div class="text-3xl mb-2">⚡</div>
+                <h4 class="font-semibold text-gray-900">即时加解密</h4>
+                <p class="text-sm text-gray-600 mt-1">所有操作在客户端完成，无需等待服务器响应，瞬间完成。</p>
+            </div>
+            <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-100 text-center">
+                <div class="text-3xl mb-2">🔒</div>
+                <h4 class="font-semibold text-gray-900">安全无忧</h4>
+                <p class="text-sm text-gray-600 mt-1">您的数据始终在本地处理，不会上传，完全保护您的隐私安全。</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-gray-400 py-6 mt-8">
+        <div class="max-w-4xl mx-auto px-4 text-center text-sm">
+            <p>内容加密工具 © 2026 | 基于 CryptoJS 实现 | 所有操作均在您的浏览器中完成</p>
+            <p class="mt-1 text-xs text-gray-500">构建日期: Wednesday, February 25, 2026</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript 逻辑 -->
+    <script>
+        // 切换选项卡
+        function switchTab(tab) {
+            const encryptSection = document.getElementById('encrypt-section');
+            const decryptSection = document.getElementById('decrypt-section');
+            const tabEncrypt = document.getElementById('tab-encrypt');
+            const tabDecrypt = document.getElementById('tab-decrypt');
+
+            if (tab === 'encrypt') {
+                encryptSection.classList.remove('hidden');
+                decryptSection.classList.add('hidden');
+                tabEncrypt.classList.add('tab-active');
+                tabEncrypt.classList.remove('tab-inactive');
+                tabDecrypt.classList.remove('tab-active');
+                tabDecrypt.classList.add('tab-inactive');
+            } else {
+                encryptSection.classList.add('hidden');
+                decryptSection.classList.remove('hidden');
+                tabDecrypt.classList.add('tab-active');
+                tabDecrypt.classList.remove('tab-inactive');
+                tabEncrypt.classList.remove('tab-active');
+                tabEncrypt.classList.add('tab-inactive');
+            }
+        }
+
+        // 加密功能
+        function encryptData() {
+            const text = document.getElementById('encryptInput').value;
+            const password = document.getElementById('encryptPassword').value;
+            const outputContainer = document.getElementById('encryptResultContainer');
+            const output = document.getElementById('encryptOutput');
+
+            if (!text || !password) {
+                alert("请输入需要加密的内容和密码！");
+                return;
+            }
+
+            try {
+                // 使用 AES 加密
+                const encrypted = CryptoJS.AES.encrypt(text, password).toString();
+                output.value = encrypted;
+                outputContainer.classList.remove('hidden');
+            } catch (error) {
+                alert("加密失败，请检查输入内容。");
+                console.error(error);
+            }
+        }
+
+        // 解密功能
+        function decryptData() {
+            const ciphertext = document.getElementById('decryptInput').value;
+            const password = document.getElementById('decryptPassword').value;
+            const outputContainer = document.getElementById('decryptResultContainer');
+            const output = document.getElementById('decryptOutput');
+
+            if (!ciphertext || !password) {
+                alert("请输入密文和解密密码！");
+                return;
+            }
+
+            try {
+                // 使用 AES 解密
+                const bytes = CryptoJS.AES.decrypt(ciphertext, password);
+                const originalText = bytes.toString(CryptoJS.enc.Utf8);
+
+                outputContainer.classList.remove('hidden');
+                
+                // 判断解密是否成功（如果密码错误或密文损坏，originalText 会为空）
+                if (!originalText) {
+                    output.value = "❌ 解密失败：密码错误或密文已损坏，请检查后重试。";
+                    output.classList.add('text-red-600', 'font-semibold');
+                } else {
+                    output.value = originalText;
+                    output.classList.remove('text-red-600', 'font-semibold');
+                }
+            } catch (error) {
+                outputContainer.classList.remove('hidden');
+                output.value = "❌ 解密失败：密文格式不正确或密码错误。";
+                output.classList.add('text-red-600', 'font-semibold');
+                console.error(error);
+            }
+        }
+
+        // 复制到剪贴板功能
+        function copyToClipboard(elementId) {
+            const copyText = document.getElementById(elementId);
+            
+            // 如果是错误提示，则不复制
+            if (copyText.value.includes("解密失败")) {
+                return;
+            }
+
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); // 兼容移动端
+
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                // 简单的视觉反馈
+                const originalBg = copyText.classList.contains('bg-gray-100') ? 'bg-gray-100' : 'bg-green-100';
+                copyText.classList.add('bg-green-100', 'border-green-500');
+                setTimeout(() => {
+                    copyText.classList.remove('bg-green-100', 'border-green-500');
+                }, 1000);
+            }).catch(err => {
+                alert("复制失败，请手动复制。");
+                console.error("Clipboard error: ", err);
+            });
+        }
+    </script>
+</body>
+</html>
