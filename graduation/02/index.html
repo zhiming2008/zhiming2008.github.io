@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>专属信件</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #84A98C;      /* 鼠尾草绿 - 清新自然 */
+            --primary-hover: #6B8E73;      /* 深一点的绿 */
+            --bg-color: #F9FAFB;           /* 极浅的灰白 */
+            --card-bg: #FFFFFF;            /* 纯白卡片 */
+            --text-main: #2C3E2D;          /* 深绿灰 - 比纯黑更柔和 */
+            --text-sub: #7A8B7C;           /* 浅灰绿 */
+            --error-color: #E07A5F;        /* 柔和的陶土红 */
+            --error-bg: #FDF3F0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            position: relative;
+            overflow-x: hidden;
+            color: var(--text-main);
+        }
+
+        /* 背景装饰：柔和的模糊光斑，增加清新感 */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.5;
+            z-index: 0;
+            pointer-events: none;
+        }
+        body::before {
+            width: 350px; height: 350px;
+            background: var(--primary-color);
+            top: -150px; left: -100px;
+        }
+        body::after {
+            width: 400px; height: 400px;
+            background: #E4DCCF; /* 暖沙色 */
+            bottom: -150px; right: -150px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 24px; /* 更大的圆角，更柔和 */
+            padding: 48px 32px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.04); /* 极浅的阴影 */
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .icon {
+            font-size: 48px;
+            margin-bottom: 24px;
+            display: inline-block;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        h2 {
+            color: var(--text-main);
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 22px;
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-sub);
+            font-size: 14px;
+            margin-bottom: 36px;
+            font-weight: 400;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 1.5px solid #E8ECE9;
+            border-radius: 14px;
+            font-size: 16px; /* 防止 iOS 自动缩放 */
+            transition: all 0.3s ease;
+            background: #FAFCFB;
+            color: var(--text-main);
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(132, 169, 140, 0.15);
+        }
+
+        .password-input::placeholder {
+            color: #B0BDB2;
+        }
+
+        .unlock-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 14px rgba(132, 169, 140, 0.3);
+            letter-spacing: 1px;
+        }
+
+        .unlock-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(132, 169, 140, 0.4);
+        }
+
+        .unlock-btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: var(--error-color);
+            font-size: 14px;
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 10px;
+            background: var(--error-bg);
+            display: none;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* 解密后的内容展示区 */
+        .content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 40px 32px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.04);
+            display: none;
+            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            text-align: left;
+            line-height: 1.8;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .content h3 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 24px;
+            font-size: 20px;
+        }
+
+        .content p {
+            margin-bottom: 16px;
+            color: #4A5D4B;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #E8ECE9;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 响应式微调 */
+        @media (max-width: 480px) {
+            .card, .content {
+                padding: 36px 24px;
+                border-radius: 20px;
+            }
+            h2 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 密码输入卡片 -->
+    <div class="container" id="login-container">
+        <div class="card">
+            <div class="icon">✉</div>
+            <h2>见字如面</h2>
+            <p class="subtitle">编号：02 · 请输入密码解锁专属信件</p>
+            
+            <div id="password-form">
+                <div class="input-group">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="password-input"
+                        placeholder="请输入解锁密码"
+                        autocomplete="off"
+                    >
+                </div>
+                
+                <button class="unlock-btn" onclick="decryptContent()">
+                    拆 开 信 件
+                </button>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                </div>
+                
+                <div class="error-message" id="error">
+                    密码不对哦，再试一次吧~
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 解密后的内容卡片 -->
+    <div class="content" id="content">
+        <!-- 解密后的 HTML 内容将显示在这里 -->
+    </div>
+
+    <script>
+        // ==========================================
+        // 配置区域：替换为你的加密内容
+        // ==========================================
+        const encryptedContent = "U2FsdGVkX18YjDe+5oAKLFCKkwydHploUyLf35ALfD2vDXR3Ldkkbwp9lHDiRaNtFPkbwoSA00TUME+TnX9WPfVlxGp8GI5BI1ZN5GGEcOTVg2ZiVxhNbZ99aGOOsqZcuHNlnsexMlxzeuLY9XfBPO3l2r2NA57leHwkdg2YUWE="; // 在这里粘贴你的 CryptoJS 加密字符串
+
+        // ==========================================
+        // 逻辑区域
+        // ==========================================
+        
+        function decryptContent() {
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error');
+            const loadingDiv = document.getElementById('loading');
+            
+            if (!password.trim()) {
+                showError('请输入密码哦');
+                return;
+            }
+            
+            // 显示加载动画
+            loadingDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            
+            // 模拟网络延迟，让动画更自然
+            setTimeout(() => {
+                try {
+                    const decrypted = CryptoJS.AES.decrypt(encryptedContent, password);
+                    const originalText = decrypted.toString(CryptoJS.enc.Utf8);
+                    
+                    if (originalText) {
+                        // 解密成功：平滑切换视图
+                        document.getElementById('content').innerHTML = originalText;
+                        document.getElementById('login-container').style.display = 'none';
+                        document.getElementById('content').style.display = 'block';
+                        
+                        // 滚动到顶部（防止页面错位）
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        showError('密码不对哦，再试一次吧~');
+                    }
+                } catch (e) {
+                    showError('解密失败，请检查密码');
+                }
+                
+                // 隐藏加载动画
+                loadingDiv.style.display = 'none';
+            }, 600);
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            // 重新触发动画
+            errorDiv.style.animation = 'none';
+            setTimeout(() => { errorDiv.style.animation = 'shake 0.4s ease'; }, 10);
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 回车键触发解密
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                decryptContent();
+            }
+        });
+        
+        // 页面加载后自动聚焦密码框（提升体验）
+        window.onload = () => {
+            document.getElementById('password').focus();
+        };
+    </script>
+</body>
+</html>
