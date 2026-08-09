@@ -1,4 +1,0 @@
-User-agent: *
-Disallow: /_astro/
-
-Sitemap: https://zhiming2008.github.io/sitemap-index.xml
