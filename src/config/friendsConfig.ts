@@ -50,6 +50,16 @@ export const friendsConfig: FriendLink[] = [
 		weight: 8,
 		enabled: true,
 	},
+	{
+		title: "The Beaverist",
+		imgurl:
+			"https://thebeaverist.cn/content/templates/the-beaverist/images/logo.png",
+		desc: "河狸HL的个人博客",
+		siteurl: "https://thebeaverist.cn",
+		tags: ["Blog"],
+		weight: 10, // 权重，数字越大排序越靠前
+		enabled: true, // 是否启用
+	},
 ];
 
 // 获取启用的友链并进行排序
